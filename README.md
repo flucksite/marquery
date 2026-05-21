@@ -5,9 +5,15 @@ from a conventional directory layout, query them through a chainable API,
 resolve associated assets, and render content to HTML.
 
 This is a Ruby companion to the [Crystal marquery
-shard](https://github.com/wout/marquery). The Crystal version embeds everything
-at compile time via macros; the Ruby version does the equivalent work at
-runtime with memoization and an opt-in eager-load hook for production boot.
+shard](https://codeberg.org/fluck/marquery.cr). The Crystal version embeds
+everything at compile time via macros; the Ruby version does the equivalent
+work at runtime with memoization and an opt-in eager-load hook for production
+boot.
+
+> [!Note]
+> The original repository is hosted at
+> [Codeberg](https://codeberg.org/fluck/marquery). The [GitHub
+> repo](https://github.com/flucksite/marquery) is just a mirror.
 
 ## Installation
 
