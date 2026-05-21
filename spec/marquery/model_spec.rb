@@ -63,4 +63,29 @@ RSpec.describe Marquery::Model do
     expect(a).to eq(b)
     expect(a.hash).to eq(b.hash)
   end
+
+  describe "#to_h" do
+    it "returns standard and declared attributes" do
+      entry = model_class.new(
+        slug: "post",
+        title: "A Post",
+        description: "x",
+        content: "body",
+        tags: %w[ruby gem],
+        author: "Wout",
+        featured: true
+      )
+
+      expect(entry.to_h).to include(
+        slug: "post",
+        title: "A Post",
+        description: "x",
+        content: "body",
+        active: true,
+        tags: %w[ruby gem],
+        author: "Wout",
+        featured: true
+      )
+    end
+  end
 end

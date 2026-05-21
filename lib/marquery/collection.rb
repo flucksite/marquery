@@ -27,6 +27,19 @@ module Marquery
       end
     end
 
+    def to_h
+      base = {
+        title: title,
+        description: description,
+        content: content,
+        assets: @assets
+      }
+      self.class.attributes.each_key do |name|
+        base[name] = public_send(name)
+      end
+      base
+    end
+
     private
 
     def coerce(value, type)

@@ -156,12 +156,131 @@ end
 If you override `process_content`, you are in charge of asset rewriting. Call
 `rewrite_assets(content)` to opt back in.
 
-## Asset serving
+## Framework integration
 
-Marquery exposes resolved asset paths (`post.asset("hero.png")` returns
-`/marquery/blog_post/.../hero.png`). It does not ship a static file server. In
-Rails or Sinatra, expose the `marquery/` directory through your existing
-static-file pipeline.
+Marquery ships two opt-in pieces for integrating with web frameworks:
+
+- `Marquery::Helpers` exposes a `markdown(content)` method that accepts a
+  String or any `Marquery::Renderable` (model or collection instance).
+- `Marquery::AssetHandler` is Rack middleware that serves files from one or
+  more marquery data directories with path-traversal protection.
+
+The two snippets below are everything you need. The framework-specific sections
+after them only differ in where you wire them up.
+
+```ruby
+# Renders a String or a Marquery::Renderable instance to HTML.
+Marquery::Helpers.markdown(post)             # => "<h1>...</h1>"
+Marquery::Helpers.markdown("# Hello")        # => "<h1>...</h1>"
+Marquery::Helpers.markdown(post, renderer: MyRenderer)
+```
+
+```ruby
+require "marquery/asset_handler"
+
+# Rack middleware. Pass one or more directories to serve files from.
+use Marquery::AssetHandler, "marquery/blog_post"
+```
+
+### Hanami
+
+Include `Marquery::Helpers` in your slice's view helpers and mount the asset
+handler as middleware. Both Hanami's app config and route-scoped middleware
+work; pick whichever fits your slice layout.
+
+```ruby
+# app/views/helpers.rb
+module MyApp
+  module Views
+    module Helpers
+      include Marquery::Helpers
+    end
+  end
+end
+```
+
+```ruby
+# config/app.rb
+require "marquery/asset_handler"
+
+module MyApp
+  class App < Hanami::App
+    config.middleware.use Marquery::AssetHandler, "marquery/blog_post"
+  end
+end
+```
+
+In templates, mark the output as safe HTML with Hanami's `raw` helper:
+
+```erb
+<%= raw markdown(post) %>
+```
+
+### Any Ruby app
+
+`Marquery::Helpers` is a plain module. `extend` it on the object that needs
+the helper, or include it in a class.
+
+```ruby
+class PostPresenter
+  include Marquery::Helpers
+
+  def initialize(post)
+    @post = post
+  end
+
+  def html
+    markdown(@post)
+  end
+end
+```
+
+If you serve HTTP through Rack (Sinatra, Roda, plain Rack), mount the asset
+handler in `config.ru`:
+
+```ruby
+require "marquery/asset_handler"
+
+use Marquery::AssetHandler, "marquery/blog_post"
+run MyApp
+```
+
+### Rails
+
+Mix `Marquery::Helpers` into `ApplicationHelper` so `markdown` is available
+across views.
+
+```ruby
+# app/helpers/application_helper.rb
+module ApplicationHelper
+  include Marquery::Helpers
+end
+```
+
+```erb
+<%= raw markdown(@post) %>
+```
+
+For serving assets, either copy `marquery/` under `public/`, point Propshaft
+at it, or add the Rack middleware:
+
+```ruby
+# config/application.rb
+require "marquery/asset_handler"
+
+config.middleware.use Marquery::AssetHandler, "marquery/blog_post"
+```
+
+### Serializing entries
+
+Both `Marquery::Model` and `Marquery::Collection` expose `to_h`, returning a
+plain Hash of standard plus declared attributes. Pipe it through any JSON
+library you like:
+
+```ruby
+require "json"
+JSON.generate(post.to_h)
+```
 
 ## Development
 

@@ -13,6 +13,7 @@ require_relative "marquery/index"
 require_relative "marquery/parser"
 require_relative "marquery/registry"
 require_relative "marquery/query"
+require_relative "marquery/helpers"
 
 module Marquery
   class Configuration

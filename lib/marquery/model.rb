@@ -29,8 +29,8 @@ module Marquery
 
       def deep_freeze(value)
         case value
-        when Array then value.map { |v| deep_freeze(v) }.freeze
-        when Hash then value.transform_values { |v| deep_freeze(v) }.freeze
+        when Array then value.map { deep_freeze(_1) }.freeze
+        when Hash then value.transform_values { deep_freeze(_1) }.freeze
         when String then value.frozen? ? value : value.dup.freeze
         else value
         end
@@ -56,6 +56,23 @@ module Marquery
 
     def hash
       [self.class, slug].hash
+    end
+
+    def to_h
+      base = {
+        slug: slug,
+        title: title,
+        description: description,
+        content: content,
+        date: date,
+        active: active?,
+        source: source,
+        assets: assets
+      }
+      self.class.attributes.each_key do |name|
+        base[name] = public_send(name)
+      end
+      base
     end
 
     private
