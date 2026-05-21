@@ -5,6 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 group :development, :test do
+  gem "irb", "~> 1.13"
   gem "rack", "~> 3.0"
   gem "rack-test", "~> 2.1"
   gem "rake", "~> 13.0"
