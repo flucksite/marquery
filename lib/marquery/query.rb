@@ -48,6 +48,12 @@ module Marquery
         File.join(Marquery.config.data_dir, dir)
       end
 
+      def assets_path
+        return nil unless assets_dir
+
+        File.join(Marquery.config.data_dir, assets_dir)
+      end
+
       def loaded?
         !!(defined?(@loaded) && @loaded)
       end
@@ -55,7 +61,7 @@ module Marquery
       def load!
         @marquery_data = Marquery::Parser.new(
           dir: data_path,
-          assets_dir: assets_dir,
+          assets_dir: assets_path,
           model: model,
           index: index,
           order_by: order_by

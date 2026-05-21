@@ -128,6 +128,37 @@ RSpec.describe Marquery::Query do
     end
   end
 
+  describe "shared assets via assets_dir" do
+    let(:shared_query) do
+      Class.new do
+        include Marquery::Query
+        dir "i18n_post"
+        assets_dir "shared_assets"
+      end
+    end
+
+    it "computes assets_path under the global data_dir" do
+      expect(shared_query.assets_path).to eq("spec/fixtures/marquery/shared_assets")
+    end
+
+    it "merges _shared, dated, and per-entry assets with per-entry winning" do
+      first = shared_query.new.find("first-post")
+
+      expect(first.assets.keys).to contain_exactly("logo.svg", "hero.png", "banner.png")
+      expect(first.assets["logo.svg"]).to end_with("shared_assets/_shared/logo.svg")
+      expect(first.assets["hero.png"]).to end_with("shared_assets/20260320/hero.png")
+      expect(first.assets["banner.png"]).to end_with("i18n_post/20260320_first_post/banner.png")
+    end
+
+    it "falls back to _shared when no dated or per-entry directory exists" do
+      other = shared_query.new.find("other-post")
+
+      expect(other.assets.keys).to contain_exactly("logo.svg", "banner.png")
+      expect(other.assets["logo.svg"]).to end_with("shared_assets/_shared/logo.svg")
+      expect(other.assets["banner.png"]).to end_with("shared_assets/_shared/banner.png")
+    end
+  end
+
   describe "custom models" do
     let(:post_class) do
       Class.new do

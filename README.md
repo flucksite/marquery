@@ -90,6 +90,63 @@ recent.size                      # unaffected by later chaining
 recent.sort_by(&:title).first    # returns the first by title
 ```
 
+## Queries
+
+Every filter or sort method returns a new query, so chains never mutate the
+original.
+
+```ruby
+query = PostQuery.new
+
+query.all                        # Array of entries
+query.first                      # nil if empty
+query.last                       # nil if empty
+query.size                       # entry count
+
+query.find("first-post")         # raises Marquery::EntryNotFound when missing
+query.find_by_slug("first-post") # returns nil when missing
+
+query.previous(post)             # previous entry, or nil at the start
+query.next(post)                 # next entry, or nil at the end
+```
+
+Chainable methods, all returning a new query:
+
+```ruby
+query.filter(&:active?)
+query.reject(&:active?)
+query.sort_by(&:title)
+query.reverse
+query.shuffle
+query.shuffle(random: Random.new(42))
+```
+
+`Marquery::Query` includes `Enumerable`, so `each`, `map`, `count`, `any?`,
+`take`, and friends are available. Those return plain Arrays, matching
+`Enumerable` conventions. Use the chainable methods above when you want to
+keep working with a query.
+
+### Error handling
+
+Marquery raises typed exceptions that all inherit from `Marquery::Error`:
+
+```ruby
+begin
+  PostQuery.new.find("nonexistent")
+rescue Marquery::EntryNotFound => exception
+  exception.message # => "Entry not found: nonexistent"
+end
+
+begin
+  post.asset("missing.png")
+rescue Marquery::AssetNotFound => exception
+  exception.message # => "Asset not found: missing.png"
+end
+```
+
+`Marquery::ParseError` is raised at load time when frontmatter or filenames
+cannot be parsed. Catching `Marquery::Error` picks up all three.
+
 ## Configuration
 
 ```ruby
@@ -110,6 +167,49 @@ Marquery.eager_load!
 
 This walks every registered query class and parses files upfront so the first
 request does not pay the loading cost.
+
+## Custom index model
+
+By default the `_index.md` file is parsed into a `Marquery::Index` with
+the standard `title`, `description`, and `content` fields. For extra
+metadata on the index page, define your own type that includes
+`Marquery::Collection` and declare attributes the same way as on a model:
+
+```ruby
+class PostIndex
+  include Marquery::Collection
+
+  attribute :subtitle
+  attribute :featured_slugs, type: :array, default: []
+end
+
+class PostQuery
+  include Marquery::Query
+
+  index PostIndex
+end
+```
+
+```markdown
+---
+title: Blog
+subtitle: Thoughts on Ruby and Hanami
+featured_slugs:
+  - first-post
+  - third-post
+---
+
+Welcome to the blog.
+```
+
+```ruby
+PostQuery.index_entry.subtitle        # => "Thoughts on Ruby and Hanami"
+PostQuery.index_entry.featured_slugs  # => ["first-post", "third-post"]
+PostQuery.index_entry.to_html         # => "<p>Welcome to the blog.</p>\n"
+```
+
+If no `_index.md` exists, `index_entry` returns an empty `Marquery::Index`
+(or your custom collection) with default field values.
 
 ## Custom rendering
 
@@ -155,6 +255,51 @@ end
 
 If you override `process_content`, you are in charge of asset rewriting. Call
 `rewrite_assets(content)` to opt back in.
+
+## Shared and multi-language assets
+
+For multilingual sites, point several query classes at a shared assets
+directory. Each language gets its own content tree; assets live once.
+
+```ruby
+class Blog::EnQuery
+  include Marquery::Query
+  dir "blog_en"
+  assets_dir "blog_assets"
+end
+
+class Blog::NlQuery
+  include Marquery::Query
+  dir "blog_nl"
+  assets_dir "blog_assets"
+end
+```
+
+Both `dir` and `assets_dir` resolve under `Marquery.config.data_dir` (default
+`marquery/`). The example above looks at:
+
+```
+marquery/blog_en/         # English entries
+marquery/blog_nl/         # Dutch entries
+marquery/blog_assets/     # shared assets
+├── _shared/
+│   └── logo.svg          # available on every entry
+├── 20260320/
+│   └── hero.png          # available on entries dated 20260320
+└── 20260325/
+    └── diagram.svg
+```
+
+Assets merge in three layers, each overriding the previous one when keys
+collide:
+
+1. `_shared/` (available to every entry)
+2. `<YYYYMMDD>/` (available to entries with that date prefix)
+3. The per-entry sibling directory next to the markdown file
+
+So a per-entry `banner.png` wins over a date-scoped `banner.png`, which in
+turn wins over a `_shared/banner.png`. This lets you provide sensible
+defaults and override per-entry when needed.
 
 ## Framework integration
 
@@ -269,6 +414,32 @@ at it, or add the Rack middleware:
 require "marquery/asset_handler"
 
 config.middleware.use Marquery::AssetHandler, "marquery/blog_post"
+```
+
+### Pagination
+
+`query.all` returns a plain Array, so any pagination library that takes an
+Array works.
+
+[Pagy](https://github.com/ddnexus/pagy) is the lightest option and works in
+Hanami, Rails, Sinatra, Roda, and plain Rack:
+
+```ruby
+@pagy, @posts = pagy_array(PostQuery.new.all, items: 10)
+```
+
+For Rails, [Kaminari](https://github.com/kaminari/kaminari) also paginates
+arrays:
+
+```ruby
+@posts = Kaminari.paginate_array(PostQuery.new.all)
+                 .page(params[:page]).per(10)
+```
+
+For plain Ruby, slice it yourself:
+
+```ruby
+pages = PostQuery.new.all.each_slice(10).to_a
 ```
 
 ### Serializing entries
