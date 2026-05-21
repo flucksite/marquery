@@ -1,0 +1,11 @@
+inherit_from:
+  - https://raw.githubusercontent.com/hanakai-rb/repo-sync/main/rubocop/rubocop.yml
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: disable
+  Exclude:
+    - "tmp/**/*"
+    - "coverage/**/*"
+    - "vendor/**/*"
+    - "spec/fixtures/**/*"
