@@ -78,5 +78,29 @@ RSpec.describe Marquery::Renderable do
       plain = Class.new { include Marquery::Model }
       expect(plain.renderer).to eq(Marquery::Renderer)
     end
+
+    it "inherits the renderer from a superclass that declared one" do
+      parent_class = model_class
+      child = Class.new(parent_class)
+      expect(child.renderer).to eq(fake_renderer)
+    end
+
+    it "allows a subclass to override its parent's renderer" do
+      parent_class = model_class
+      override_renderer = Class.new do
+        include Marquery::MarkdownToHtml
+
+        def markdown_to_html(content)
+          "<other>#{content}</other>"
+        end
+      end
+
+      child = Class.new(parent_class) do
+        renderer override_renderer
+      end
+
+      expect(child.renderer).to eq(override_renderer)
+      expect(parent_class.renderer).to eq(fake_renderer)
+    end
   end
 end

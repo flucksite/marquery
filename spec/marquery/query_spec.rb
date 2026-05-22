@@ -39,6 +39,17 @@ RSpec.describe Marquery::Query do
     it "computes data_path under the global data_dir" do
       expect(query_class.data_path).to eq("spec/fixtures/marquery/blog_post")
     end
+
+    it "returns nil for assets_path when assets_dir is not set" do
+      expect(query_class.assets_dir).to be_nil
+      expect(query_class.assets_path).to be_nil
+    end
+
+    it "raises a clear error for an anonymous query without an explicit dir" do
+      klass = Class.new { include Marquery::Query }
+      expect { klass.dir }
+        .to raise_error(Marquery::Error, /Cannot derive directory/)
+    end
   end
 
   describe "loading" do

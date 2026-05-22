@@ -85,4 +85,41 @@ RSpec.describe Marquery::Parser do
       end
     end
   end
+
+  describe "frontmatter parsing" do
+    it "raises ParseError when frontmatter is a YAML scalar instead of a mapping" do
+      Dir.mktmpdir do |tmp|
+        File.write(
+          File.join(tmp, "20260320_post.md"),
+          "---\njust a string scalar\n---\nbody\n"
+        )
+
+        bad = described_class.new(
+          dir: tmp,
+          model: Marquery::Entry,
+          index: Marquery::Index,
+          order_by: [:date, Marquery::Order::DESC]
+        )
+
+        expect { bad.call }
+          .to raise_error(Marquery::ParseError, /Frontmatter must be a YAML mapping/)
+      end
+    end
+
+    it "raises ParseError for an unparseable date prefix" do
+      Dir.mktmpdir do |tmp|
+        File.write(File.join(tmp, "20269999_post.md"), "body")
+
+        bad = described_class.new(
+          dir: tmp,
+          model: Marquery::Entry,
+          index: Marquery::Index,
+          order_by: [:date, Marquery::Order::DESC]
+        )
+
+        expect { bad.call }
+          .to raise_error(Marquery::ParseError, /Invalid date prefix/)
+      end
+    end
+  end
 end
