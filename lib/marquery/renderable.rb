@@ -24,9 +24,7 @@ module Marquery
       end
     end
 
-    def assets
-      @assets ||= {}
-    end
+    def assets = @assets ||= {}
 
     def asset(name)
       path = assets[name] || raise(Marquery::AssetNotFound.new(name))

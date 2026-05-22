@@ -47,8 +47,10 @@ module Marquery
     def load_entries
       return [] unless @dir.directory?
 
-      paths = Pathname.glob(@dir.join("*.md")).reject { _1.basename.to_s == "_index.md" }
-      paths.map { load_entry(_1) }
+      Pathname
+        .glob(@dir.join("*.md"))
+        .reject { _1.basename.to_s == "_index.md" }
+        .map { load_entry(_1) }
     end
 
     def load_entry(path)
@@ -119,7 +121,7 @@ module Marquery
     end
 
     def sort(entries)
-      sorted = entries.sort_by { |entry| entry.public_send(@order_field) }
+      sorted = entries.sort_by { _1.public_send(@order_field) }
       @order_direction == Marquery::Order::DESC ? sorted.reverse : sorted
     end
 
