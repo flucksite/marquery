@@ -327,7 +327,9 @@ Marquery::Helpers.markdown(post, renderer: MyRenderer)
 require "marquery/asset_handler"
 
 # Rack middleware. Pass one or more directories to serve files from.
-use Marquery::AssetHandler, "marquery/blog_post"
+# `data_path` and `assets_path` are computed under Marquery.config.data_dir,
+# so they stay in sync if you change the global root.
+use Marquery::AssetHandler, PostQuery.data_path, PostQuery.assets_path
 ```
 
 ### Hanami
@@ -350,10 +352,11 @@ end
 ```ruby
 # config/app.rb
 require "marquery/asset_handler"
+require_relative "../app/queries/post_query"
 
 module MyApp
   class App < Hanami::App
-    config.middleware.use Marquery::AssetHandler, "marquery/blog_post"
+    config.middleware.use Marquery::AssetHandler, PostQuery.data_path
   end
 end
 ```
@@ -388,8 +391,9 @@ handler in `config.ru`:
 
 ```ruby
 require "marquery/asset_handler"
+require_relative "post_query"
 
-use Marquery::AssetHandler, "marquery/blog_post"
+use Marquery::AssetHandler, PostQuery.data_path
 run MyApp
 ```
 
@@ -416,7 +420,7 @@ at it, or add the Rack middleware:
 # config/application.rb
 require "marquery/asset_handler"
 
-config.middleware.use Marquery::AssetHandler, "marquery/blog_post"
+config.middleware.use Marquery::AssetHandler, PostQuery.data_path
 ```
 
 ### Pagination
