@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "forwardable"
 require_relative "entry"
 require_relative "index"
 require_relative "order"
@@ -8,30 +9,39 @@ require_relative "registry"
 
 module Marquery
   module Query
+    extend Forwardable
     include Enumerable
 
     def self.included(base)
       base.extend(ClassMethods)
+      base.instance_variable_set(:@marquery_model, Marquery::Entry)
+      base.instance_variable_set(:@marquery_index, Marquery::Index)
+      base.instance_variable_set(:@order_field, :date)
+      base.instance_variable_set(:@order_direction, Marquery::Order::DESC)
+      base.instance_variable_set(:@dir, nil)
+      base.instance_variable_set(:@assets_dir, nil)
+      base.instance_variable_set(:@marquery_data, nil)
+      base.instance_variable_set(:@loaded, false)
       Marquery::Registry.register(base)
     end
 
     module ClassMethods
       def model(klass = nil)
         @marquery_model = klass if klass
-        @marquery_model ||= Marquery::Entry
+        @marquery_model
       end
 
       def index(klass = nil)
         @marquery_index = klass if klass
-        @marquery_index ||= Marquery::Index
+        @marquery_index
       end
 
       def order_by(field = nil, direction = nil)
         if field
           @order_field = field.to_sym
-          @order_direction = direction ? Marquery::Order.validate!(direction) : Marquery::Order::DESC
+          @order_direction = Marquery::Order.validate!(direction) if direction
         end
-        [@order_field || :date, @order_direction || Marquery::Order::DESC]
+        [@order_field, @order_direction]
       end
 
       def dir(path = nil)
@@ -55,7 +65,7 @@ module Marquery
       end
 
       def loaded?
-        !!(defined?(@loaded) && @loaded)
+        @loaded
       end
 
       def load!
@@ -89,13 +99,20 @@ module Marquery
       private
 
       def derive_dir
-        name
+        derived = name
           .to_s
           .sub(/Query\z/, "")
           .gsub("::", "")
           .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
           .gsub(/([a-z\d])([A-Z])/, '\1_\2')
           .downcase
+
+        return derived unless derived.empty?
+
+        raise(
+          Marquery::Error,
+          "Cannot derive directory for #{inspect}; call `dir \"...\"` explicitly"
+        )
       end
     end
 
@@ -112,27 +129,9 @@ module Marquery
       self
     end
 
-    def all
-      entries
-    end
+    def all = entries
 
-    def size
-      entries.size
-    end
-    alias_method :length, :size
-    alias_method :count, :size
-
-    def empty?
-      entries.empty?
-    end
-
-    def first
-      entries.first
-    end
-
-    def last
-      entries.last
-    end
+    def_delegators :entries, :size, :length, :count, :empty?, :first, :last
 
     def find(slug)
       find_by_slug(slug) || raise(Marquery::EntryNotFound.new(slug))
