@@ -9,6 +9,7 @@ jobs:
     container:
       image: rubylang/ruby:${{ matrix.ruby-version }}
     steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends git
       - run: git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} .
 
       - run: bundle install
