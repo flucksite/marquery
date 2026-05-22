@@ -2,14 +2,14 @@ on: [push]
 
 jobs:
   test:
-    runs-on: codeberg-small
+    runs-on: codeberg-tiny
     strategy:
       matrix:
         ruby-version: ["3.4", "4.0"]
     container:
       image: rubylang/ruby:${{ matrix.ruby-version }}
     steps:
-      - run: apt-get update && apt-get install -y --no-install-recommends git build-essential
+      - run: apt-get update && apt-get install -y --no-install-recommends git build-essential libyaml-dev
       - run: git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} .
 
       - run: bundle install
